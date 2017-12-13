@@ -31,7 +31,7 @@ class Tracker:
                 target = self.targets.get(tracklet)
                 tracker = target['tracker']
                 tracker.predict(timestamp)
-                similarity = cityblock((x, y), (tracker.mu_hat[0], tracker.mu_hat[2]))
+                similarity = cityblock((x, y), (tracker.mu[0], tracker.mu[2]))
                 if similarity <= min_similarity:
                     min_similarity = similarity
                     nearest_neighbor = tracklet
@@ -102,7 +102,7 @@ def plot_trajectories(plot_data=False):
         ax2.scatter(believes[:, 0], believes[:, 1], color=colors[index])
         final = len(believes)
         ax2.scatter(believes[final-1][0], believes[final-1][1], color=colors[index], s=(4, 2))
-        ax2.annotate('mu_hat: ' + str(index), (believes[final-1][0], believes[final-1][1]))
+        ax2.annotate('mu: ' + str(index), (believes[final-1][0], believes[final-1][1]))
         # ax.annotate('b', (believes[:, 0], believes[:, 1]))
         print('Trajectory {}'.format(index))
         print('============================')
@@ -112,10 +112,10 @@ def plot_trajectories(plot_data=False):
         print(uncertainty)
         print("============================")
 
-    ax1.set_xlim(0, 1)
-    ax1.set_ylim(-1, 1)
-    ax2.set_ylim(-1, 1)
-    ax2.set_xlim(0, 1)
+    # ax1.set_xlim(0, 1)
+    # ax1.set_ylim(-1, 1)
+    # ax2.set_ylim(-1, 1)
+    # ax2.set_xlim(0, 1)
     if plot_data:
         data = np.load(INPUT_FILE)
         ax1.scatter(data[:, 0], data[:, 1], color=(0.2, 0.5, 0.5), alpha=0.3)

@@ -62,13 +62,12 @@ def detect(save=True, plot=False):
                         feed_dict={image_tensor: image_tensor_input})
                     continuous_time = continuous_time + time.time() - time_before_inference
 
-
                     normalized_boxes = np.squeeze(boxes)
                     normalized_scores = np.squeeze(scores)
 
                     has_detections = False
                     for index, box in enumerate(normalized_boxes):
-                        if not normalized_scores[index] <= SCORE_THRESHOLD:
+                        if normalized_scores[index] >= SCORE_THRESHOLD:
                             has_detections = True
                             ymin, xmin, ymax, xmax = box
 
