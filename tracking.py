@@ -2,14 +2,13 @@ import colorsys
 
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.spatial.distance import cityblock
+from scipy.spatial.distance import cityblock, mahalanobis, euclidean
 from filtering import KalmanFilter
 import math
 
-INPUT_FILE = 'data/detections.npy'
-THRESHOLD = 0.005
-MAX_NEAREST_NEIGHBOR = 0.25
-SIMULATION_DELTA = 0.05
+INPUT_FILE = 'data/detections2.npy'
+MAX_NEAREST_NEIGHBOR = 0.2
+SIMULATION_DELTA = 0.01
 
 
 class Tracker:
@@ -19,39 +18,35 @@ class Tracker:
 
     def add_detection(self, detection):
         x, y, timestamp, discrete_time, confidence = detection
-        if len(self.targets.keys()) == 0:
+        min_similarity = MAX_NEAREST_NEIGHBOR
+        nearest_neighbor = None
+        for tracklet in self.targets:
+            target = self.targets.get(tracklet)
+            tracker = target['tracker']
+            tracker.predict(timestamp)
+            similarity = euclidean((x, y), (tracker.mu[0], tracker.mu[2]))
+            if similarity <= min_similarity:
+                min_similarity = similarity
+                nearest_neighbor = tracklet
+
+        if nearest_neighbor is not None:
+            tracklet = self.targets[nearest_neighbor]
+            tracker = tracklet['tracker']
+            tracker.update((x, y), 1 - confidence)
+            trajectory = tracklet['trajectory']
+            trajectory.append((tracker.mu[0], tracker.mu[2], tracker.mu[1], tracker.mu[3], timestamp, tracker.sigma[0][0], tracker.sigma[2][2]))
+        else:
             self.targets[hash(timestamp)] = {
                 'tracker': KalmanFilter(x, y, e=1 - confidence, timestamp=timestamp),
-                'trajectory': [(x, y, timestamp, 1 - confidence, 1 - confidence)]
+                'trajectory': [(x, y, 0, 0, timestamp, 1 - confidence, 1 - confidence)]
             }
-        else:
-            min_similarity = MAX_NEAREST_NEIGHBOR
-            nearest_neighbor = None
-            for tracklet in self.targets:
-                target = self.targets.get(tracklet)
-                tracker = target['tracker']
-                tracker.predict(timestamp)
-                similarity = cityblock((x, y), (tracker.mu[0], tracker.mu[2]))
-                if similarity <= min_similarity:
-                    min_similarity = similarity
-                    nearest_neighbor = tracklet
-
-            if nearest_neighbor is not None:
-                tracklet = self.targets[nearest_neighbor]
-                tracker = tracklet['tracker']
-                tracker.update((x, y), 1 - confidence)
-                trajectory = tracklet['trajectory']
-                trajectory.append((tracker.mu[0], tracker.mu[2], timestamp, tracker.sigma[0][0], tracker.sigma[2][2]))
-            else:
-                self.targets[hash(timestamp)] = {
-                    'tracker': KalmanFilter(x, y, e=1 - confidence, timestamp=timestamp),
-                    'trajectory': [(x, y, timestamp, 1 - confidence, 1 - confidence)]
-                }
 
     def predict(self, t):
         for key in self.targets:
             tracklet = self.targets[key]
-            tracklet['tracker'].predict(t)
+            tracker = tracklet['tracker']
+            tracker.predict(t)
+            print(key, math.degrees(math.atan2(tracker.mu[3], tracker.mu[1])))
 
 
 def tracking():
@@ -112,10 +107,7 @@ def plot_trajectories(plot_data=False):
         print(uncertainty)
         print("============================")
 
-    # ax1.set_xlim(0, 1)
-    # ax1.set_ylim(-1, 1)
-    # ax2.set_ylim(-1, 1)
-    # ax2.set_xlim(0, 1)
+
     if plot_data:
         data = np.load(INPUT_FILE)
         ax1.scatter(data[:, 0], data[:, 1], color=(0.2, 0.5, 0.5), alpha=0.3)
